@@ -195,48 +195,70 @@ export function useAssignments(
       newCleanerId: string,
       date: string
     ): Assignment | null => {
-      // Find the assignment
-      const assignment = currentAssignments.find((a) => a.id === assignmentId);
-      if (!assignment) return null;
+      try {
+        // Find the assignment
+        const assignment = currentAssignments.find((a) => a.id === assignmentId);
+        if (!assignment) return null;
 
-      const newCleaner = cleaners.find((c) => c.id === newCleanerId);
-      if (!newCleaner) return null;
+        const newCleaner = cleaners.find((c) => c.id === newCleanerId);
+        if (!newCleaner) return null;
 
-      // Check gender match
-      const oldCleaner = cleaners.find((c) => c.id === assignment.cleanerId);
-      if (oldCleaner && oldCleaner.gender !== newCleaner.gender) {
-        return null; // Cannot substitute across genders
+        // Check gender match
+        const oldCleaner = cleaners.find((c) => c.id === assignment.cleanerId);
+        if (oldCleaner && oldCleaner.gender !== newCleaner.gender) {
+          return null; // Cannot substitute across genders
+        }
+
+        // Create updated assignment
+        const updatedAssignment: Assignment = {
+          ...assignment,
+          cleanerId: newCleanerId,
+        };
+
+        // Update current assignments
+        setCurrentAssignments((prev) =>
+          prev.map((a) => (a.id === assignmentId ? updatedAssignment : a))
+        );
+
+        // Update history
+        setAssignmentHistory((prev) =>
+          prev.map((h) =>
+            h.date === date
+              ? {
+                  ...h,
+                  assignments: h.assignments.map((a) =>
+                    a.id === assignmentId ? updatedAssignment : a
+                  ),
+                }
+              : h
+          )
+        );
+
+        // Update new cleaner stats
+        updateCleanerAssignment(newCleanerId, date);
+        // Decrement old cleaner's assignment count if not the same as new
+        if (oldCleaner && oldCleaner.id !== newCleanerId) {
+          // Custom logic: decrement assignmentCount for old cleaner
+          // (We can't use updateCleanerAssignment directly, so we update state manually)
+          setTimeout(() => {
+            // Use setTimeout to ensure this runs after the above state updates
+            // (avoids React batching issues)
+            if (typeof window !== 'undefined') {
+              const prevCleaners = JSON.parse(localStorage.getItem('cleaners-data') || '[]');
+              const updatedCleaners = prevCleaners.map((cleaner: any) =>
+                cleaner.id === oldCleaner.id && cleaner.assignmentCount > 0
+                  ? { ...cleaner, assignmentCount: cleaner.assignmentCount - 1 }
+                  : cleaner
+              );
+              localStorage.setItem('cleaners-data', JSON.stringify(updatedCleaners));
+            }
+          }, 0);
+        }
+        return updatedAssignment;
+      } catch (error) {
+        console.error('Error in substituteCleaner:', error);
+        return null;
       }
-
-      // Create updated assignment
-      const updatedAssignment: Assignment = {
-        ...assignment,
-        cleanerId: newCleanerId,
-      };
-
-      // Update current assignments
-      setCurrentAssignments((prev) =>
-        prev.map((a) => (a.id === assignmentId ? updatedAssignment : a))
-      );
-
-      // Update history
-      setAssignmentHistory((prev) =>
-        prev.map((h) =>
-          h.date === date
-            ? {
-                ...h,
-                assignments: h.assignments.map((a) =>
-                  a.id === assignmentId ? updatedAssignment : a
-                ),
-              }
-            : h
-        )
-      );
-
-      // Update cleaner stats
-      updateCleanerAssignment(newCleanerId, date);
-
-      return updatedAssignment;
     },
     [currentAssignments, cleaners, updateCleanerAssignment]
   );

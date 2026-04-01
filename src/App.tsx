@@ -9,11 +9,13 @@ import { CleanerManagement } from '@/sections/CleanerManagement';
 import { AreaManagement } from '@/sections/AreaManagement';
 import { AssignmentDisplay } from '@/sections/AssignmentDisplay';
 import { Statistics } from '@/sections/Statistics';
+import { CalendarExport } from '@/sections/CalendarExport';
 import {
   Users,
   MapPin,
   ClipboardList,
   BarChart3,
+  Calendar,
   Sparkles,
   RotateCcw,
   Info,
@@ -142,14 +144,20 @@ function App() {
   };
 
   const handleSubstituteCleaner = (assignmentId: string, newCleanerId: string, date: string) => {
-    const result = substituteCleaner(assignmentId, newCleanerId, date);
-    if (result) {
-      const newCleaner = cleaners.find((c) => c.id === newCleanerId);
-      toast.success(`Substituted with ${newCleaner?.name} successfully!`);
-    } else {
-      toast.error('Failed to substitute cleaner');
+    try {
+      const result = substituteCleaner(assignmentId, newCleanerId, date);
+      if (result) {
+        const newCleaner = cleaners.find((c) => c.id === newCleanerId);
+        toast.success(`Substituted with ${newCleaner?.name} successfully!`);
+      } else {
+        toast.error('Failed to substitute cleaner');
+      }
+      return result;
+    } catch (error) {
+      console.error('Substitute cleaner error:', error);
+      toast.error('An unexpected error occurred while substituting cleaner');
+      return null;
     }
-    return result;
   };
 
   const handleResetAllData = () => {
@@ -236,10 +244,14 @@ function App() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4" />
               <span className="hidden sm:inline">Assignments</span>
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Calendar</span>
             </TabsTrigger>
             <TabsTrigger value="cleaners" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
@@ -267,6 +279,14 @@ function App() {
               onClearAssignments={handleClearAssignments}
               onLoadFromHistory={handleLoadFromHistory}
               onClearHistory={handleClearHistory}
+            />
+          </TabsContent>
+
+          <TabsContent value="calendar" className="space-y-6">
+            <CalendarExport
+              assignments={assignmentHistory.flatMap((h) => h.assignments)}
+              cleaners={cleaners}
+              areas={areas}
             />
           </TabsContent>
 

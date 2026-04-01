@@ -136,11 +136,17 @@ export function AssignmentDisplay({
 
   const handleSubstitute = () => {
     if (selectedAssignment && substituteCleanerId) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      onSubstituteCleaner(selectedAssignment.id, substituteCleanerId, dateStr);
-      setIsSubstituteDialogOpen(false);
-      setSelectedAssignment(null);
-      setSubstituteCleanerId('');
+      try {
+        onSubstituteCleaner(selectedAssignment.id, substituteCleanerId, selectedAssignment.date);
+        // Use setTimeout to ensure state updates complete before closing dialog
+        setTimeout(() => {
+          setIsSubstituteDialogOpen(false);
+          setSelectedAssignment(null);
+          setSubstituteCleanerId('');
+        }, 0);
+      } catch (error) {
+        console.error('Error substituting cleaner:', error);
+      }
     }
   };
 
@@ -256,12 +262,17 @@ export function AssignmentDisplay({
     const currentCleaner = getCleanerById(selectedAssignment.cleanerId);
     if (!currentCleaner) return [];
     
-    return cleaners.filter(
-      (c) => 
-        c.gender === currentCleaner.gender && 
-        c.id !== currentCleaner.id &&
-        !currentAssignments.some((a) => a.cleanerId === c.id)
-    );
+    try {
+      return cleaners.filter(
+        (c) => 
+          c.gender === currentCleaner.gender && 
+          c.id !== currentCleaner.id &&
+          !currentAssignments.some((a) => a.cleanerId === c.id)
+      );
+    } catch (error) {
+      console.error('Error getting available substitutes:', error);
+      return [];
+    }
   };
 
   return (
